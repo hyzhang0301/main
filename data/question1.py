@@ -104,7 +104,7 @@ def select_important_features(X_train, y_train, X_test):
 # 主流程
 def main():
     # 加载和处理数据
-    filepath = 'data\附件一（训练集）.xlsx'
+    filepath = 'F:\Desktop\数模\main\data\附件一（训练集）.xlsx'
     data = load_and_preprocess_data(filepath)
     
     # 提取特征
