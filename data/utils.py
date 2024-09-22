@@ -7,6 +7,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
 
 def get_columns(file_path, star_coloumn_id):
     """
@@ -35,12 +42,12 @@ def get_labels(row):
     one_hot_labels = pd.get_dummies(row)
     return one_hot_labels
 
-def get_onehot_labels(file_path, name):
+def get_onehot_labels(file_path, column_name, name):
     """
     输入文件路径，返回onehot形式标签
     """
     df = pd.read_excel(file_path, sheet_name=name)
-    labels = df["励磁波形"]
+    labels = df[column_name]
     onehot_labels = get_labels(labels)
     return onehot_labels
 
@@ -114,8 +121,17 @@ def labels(row):
     rows = le.fit_transform(rows)
     return rows
 
+def read_column_from_excel(file_path, column_name, sheet_name):
+    """
+    读取单列
+    """
+    df = pd.read_excel(file_path, sheet_name=sheet_name)
+    return df[column_name]
 
 class RandomForest():
+    """
+    随机森林
+    """
     def __init__(self, train_file_path, predict_file_path, train_start_column_id, predict_start_column_id):
         self.train_file_path = train_file_path
         self.predict_file_path = predict_file_path
@@ -164,10 +180,64 @@ class RandomForest():
 
         return y_pred
         # 预测
+    
+class MultiLogisticRegression:
+    """
+    多元逻辑回归
+    """
+    def __init__(self):
+        self.model = LogisticRegression()
+
+    def fit(self, X, y):
+        """拟合模型"""
+        self.model.fit(X, y)
+
+    def predict(self, X):
+        """进行预测"""
+        return self.model.predict(X)
+
+    def score(self, X, y):
+        """评估模型准确率"""
+        y_pred = self.predict(X)
+        return accuracy_score(y, y_pred)
+    
+class MultiLinearRegression:
+    def __init__(self):
+        self.model = LinearRegression()
+
+    def fit(self, X, y):
+        """拟合模型"""
+        self.model.fit(X, y)
+
+    def predict(self, X):
+        """进行预测"""
+        return self.model.predict(X)
+
+    def score(self, X, y):
+        """评估模型的 R² 得分"""
+        return self.model.score(X, y)
 
 
+class RandomForestRegressorModel:
+    def __init__(self, n_estimators=100, random_state=42):
+        self.n_estimators = n_estimators
+        self.random_state = random_state
+        self.model = None
 
+    def train(self, X_train, y_train):
+        """训练随机森林回归模型"""
+        self.model = RandomForestRegressor(n_estimators=self.n_estimators, random_state=self.random_state)
+        self.model.fit(X_train, y_train)
 
+    def predict(self, X_test):
+        """进行预测"""
+        return self.model.predict(X_test)
+
+    def evaluate(self, y_test, y_pred):
+        """评估模型性能"""
+        r2 = r2_score(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        return r2, mse
 
 
 
