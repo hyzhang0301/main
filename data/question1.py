@@ -1,24 +1,48 @@
+# @title
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_selection import SelectFromModel
 from scipy.stats import skew, kurtosis
 from scipy.fft import fft
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-# 读取数据并处理
-def load_and_preprocess_data(filepath):
-    # 读取 Excel 数据
-    data = pd.read_excel(filepath)
-    # 重命名列
-    data.columns = ['T/oC', 'f/Hz', 'P_w/m3', 'waveform'] + [f'B(t)_{i}' for i in range(0, 1024)]
-    # 波形分类为数值
-    le = LabelEncoder()
-    data['waveform'] = le.fit_transform(data['waveform'])
+# 数据处理与加载
+def rename_columns(data, is_test=False):
+    """重命名训练集或测试集的列"""
+    if not is_test:
+        columns = ['T/oC', 'f/Hz', 'P_w/m3', 'waveform'] + [f'B(t)_{i}' for i in range(1024)]
+    else:
+        columns = ['serial number', 'T/oC', 'f/Hz', 'Core material'] + [f'B(t)_{i}' for i in range(1024)]
+    
+    data.columns = columns
+    return data
+
+# 读取并处理数据
+def load_and_preprocess_data(filepath, is_test=False):
+    """根据是否为测试集加载并处理数据"""
+    if not is_test:
+        sheet_names = ['材料1', '材料2', '材料3', '材料4']
+        data_frames = [rename_columns(pd.read_excel(filepath, sheet_name=sheet)) for sheet in sheet_names]
+        data = pd.concat(data_frames, axis=0, ignore_index=True)
+        print(data.info())
+        # 波形分类为数值
+        le = LabelEncoder()
+        data['waveform'] = le.fit_transform(data['waveform'])
+
+        # 查看类别与数值映射
+        label_mapping = dict(zip(le.classes_, range(len(le.classes_))))
+        print("类别到数值的映射:", label_mapping)
+
+        # # 如果需要反向映射
+        # reverse_mapping = dict(zip(range(len(le.classes_)), le.classes_))
+        # print("数值到类别的映射:", reverse_mapping)
+
+    else:
+        data = rename_columns(pd.read_excel(filepath), is_test=True)
+    
     return data
 
 # 特征提取
@@ -57,36 +81,6 @@ def extract_features(X):
     
     return features
 
-# 模型评估（交叉验证 + 混淆矩阵）
-def evaluate_model(X, y):
-    clf = RandomForestClassifier(n_estimators=100, random_state=42)
-    
-    # 交叉验证
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_scores = cross_val_score(clf, X, y, cv=skf, scoring='accuracy')
-    print(f"Cross-Validation Accuracy: {cv_scores.mean():.3f} ± {cv_scores.std():.3f}")
-    
-    # 分割数据集并训练模型
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    
-    print("Classification Report:")
-    print(classification_report(y_test, y_pred))
-    
-    # 混淆矩阵
-    plot_confusion_matrix(y_test, y_pred, labels=[0, 1, 2])
-
-# 绘制混淆矩阵
-def plot_confusion_matrix(y_true, y_pred, labels):
-    cm = confusion_matrix(y_true, y_pred)
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
-    plt.title('Confusion Matrix')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.show()
-
 # 特征选择
 def select_important_features(X_train, y_train, X_test):
     clf = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -99,25 +93,39 @@ def select_important_features(X_train, y_train, X_test):
     print(f"Original number of features: {X_train.shape[1]}")
     print(f"Reduced number of features: {X_train_selected.shape[1]}")
     
-    return X_train_selected, X_test_selected
+    selected_features = X_train.columns[selector.get_support()].tolist()
+    print("Selected features: ", selected_features)
+
+    return X_train_selected, X_test_selected, selector
+
+# 预测并输出结果
+def predict_on_test_data(test_filepath, selector, clf_selected):
+    test_data = load_and_preprocess_data(test_filepath, is_test=True)
+    X_test_raw = test_data.iloc[:, 4:].values
+    X_test_features = extract_features(X_test_raw)
+    X_test_selected = selector.transform(X_test_features)
+    
+    test_data['waveform_prediction'] = clf_selected.predict(X_test_selected)
+    test_data[['serial number', 'waveform_prediction']].to_csv('test_predictions.csv', index=False)
+    print(test_data[['serial number', 'waveform_prediction']].head())
 
 # 主流程
 def main():
-    # 加载和处理数据
-    filepath = 'F:\Desktop\数模\main\data\附件一（训练集）.xlsx'
-    data = load_and_preprocess_data(filepath)
+    # 加载和处理训练集数据
+    train_filepath = '/content/drive/MyDrive/loss modelling of magnetic components/train_data.xlsx'
+    test_filepath = '/content/drive/MyDrive/loss modelling of magnetic components/test1.xlsx'
+    data = load_and_preprocess_data(train_filepath)
     
     # 提取特征
     X_raw = data.iloc[:, 4:].values  # 磁通密度数据
     X = extract_features(X_raw)
     y = data['waveform']
     
-    # 评估模型
-    evaluate_model(X, y)
-
-    # 特征选择
+    # 分割数据集
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    X_train_selected, X_test_selected = select_important_features(X_train, y_train, X_test)
+    
+    # 特征选择
+    X_train_selected, X_test_selected, selector = select_important_features(X_train, y_train, X_test)
 
     # 在特征选择后的数据上训练模型
     clf_selected = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -127,7 +135,9 @@ def main():
     # 输出特征选择后的模型性能
     print("Classification Report after Feature Selection:")
     print(classification_report(y_test, y_pred_selected))
-    plot_confusion_matrix(y_test, y_pred_selected, labels=[0, 1, 2])
+
+    # 测试集预测
+    predict_on_test_data(test_filepath, selector, clf_selected)
 
 if __name__ == "__main__":
     main()

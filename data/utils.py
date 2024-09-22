@@ -3,6 +3,8 @@ import numpy as np
 import numpy as np
 import pandas as pd
 
+from sklearn.preprocessing import LabelEncoder
+
 
 def get_labels(row):
     """
@@ -43,10 +45,18 @@ def min(row):
     """
     获取最小值
     """
-    rows= row.to_numpy()
+    rows = row.to_numpy()
     rows_min = np.min(rows, axis=1)
     return rows_min
 
+def labels(row):
+    """
+    获取标签（非one-hot向量）
+    """
+    rows = row.to_numpy()
+    le = LabelEncoder()
+    rows = le.fit_transform(rows)
+    return rows
 
 
 
