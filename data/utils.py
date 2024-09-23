@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.svm import SVR
 
 
 def get_columns(file_path, star_coloumn_id):
@@ -272,3 +273,18 @@ class PolynomialRegression:
         r2 = r2_score(y, y_pred)
         return mse, r2
 
+class SVRegression:
+    def __init__(self, kernel='rbf', C=1.0, epsilon=0.1):
+        self.model = SVR(kernel=kernel, C=C, epsilon=epsilon)
+
+    def fit(self, X, y):
+        """拟合模型"""
+        self.model.fit(X, y)
+
+    def predict(self, X):
+        """进行预测"""
+        return self.model.predict(X)
+
+    def score(self, X, y):
+        """评估模型的 R² 得分"""
+        return self.model.score(X, y)
