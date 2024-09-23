@@ -114,6 +114,12 @@ def min(row):
     rows_min = np.min(rows, axis=1)
     return rows_min
 
+def peak_to_peak(row):
+    """
+    返回峰峰值
+    """
+    return max(row) - min(row)
+
 def labels(row):
     """
     获取标签（非one-hot向量）
