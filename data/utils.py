@@ -13,6 +13,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 def get_columns(file_path, star_coloumn_id):
@@ -240,4 +242,27 @@ class RandomForestRegressorModel:
         return r2, mse
 
 
+class PolynomialRegression:
+    def __init__(self, degree=2):
+        self.degree = degree
+        self.poly_features = PolynomialFeatures(degree=self.degree)
+        self.model = LinearRegression()
+        
+    def fit(self, X, y):
+        # 生成多项式特征
+        X_poly = self.poly_features.fit_transform(X)
+        # 拟合模型
+        self.model.fit(X_poly, y)
+        
+    def predict(self, X):
+        # 生成多项式特征
+        X_poly = self.poly_features.transform(X)
+        # 进行预测
+        return self.model.predict(X_poly)
+    
+    def evaluate(self, X, y):
+        y_pred = self.predict(X)
+        mse = mean_squared_error(y, y_pred)
+        r2 = r2_score(y, y_pred)
+        return mse, r2
 
