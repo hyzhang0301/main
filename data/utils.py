@@ -249,11 +249,56 @@ class RandomForestRegressorModel:
         return r2, mse
 
 
+# class PolynomialRegression:
+#     def __init__(self, degree=2):
+#         self.degree = degree
+#         self.poly_features = PolynomialFeatures(degree=self.degree)
+#         self.model = LinearRegression()
+        
+#     def fit(self, X, y):
+#         # 生成多项式特征
+#         X_poly = self.poly_features.fit_transform(X)
+#         # 拟合模型
+#         self.model.fit(X_poly, y)
+        
+#     def predict(self, X):
+#         # 生成多项式特征
+#         X_poly = self.poly_features.transform(X)
+#         # 进行预测
+#         return self.model.predict(X_poly)
+    
+#     def evaluate(self, X, y):
+#         y_pred = self.predict(X)
+#         mse = mean_squared_error(y, y_pred)
+#         r2 = r2_score(y, y_pred)
+#         return mse, r2
+
+class SVRegression:
+    def __init__(self, kernel='rbf', C=1.0, epsilon=0.1):
+        self.model = SVR(kernel=kernel, C=C, epsilon=epsilon)
+
+    def fit(self, X, y):
+        """拟合模型"""
+        self.model.fit(X, y)
+
+    def predict(self, X):
+        """进行预测"""
+        return self.model.predict(X)
+
+    def score(self, X, y):
+        """评估模型的 R² 得分"""
+        return self.model.score(X, y)
+    
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error, r2_score
+
 class PolynomialRegression:
-    def __init__(self, degree=2):
+    def __init__(self, degree=2, alpha=1.0):
         self.degree = degree
+        self.alpha = alpha
         self.poly_features = PolynomialFeatures(degree=self.degree)
-        self.model = LinearRegression()
+        self.model = Ridge(alpha=self.alpha)  # 使用Ridge回归
         
     def fit(self, X, y):
         # 生成多项式特征
@@ -272,19 +317,65 @@ class PolynomialRegression:
         mse = mean_squared_error(y, y_pred)
         r2 = r2_score(y, y_pred)
         return mse, r2
+    
 
-class SVRegression:
-    def __init__(self, kernel='rbf', C=1.0, epsilon=0.1):
-        self.model = SVR(kernel=kernel, C=C, epsilon=epsilon)
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import train_test_split
 
-    def fit(self, X, y):
-        """拟合模型"""
-        self.model.fit(X, y)
+# class LassoRegressionModel:
+#     def __init__(self, alpha=1.0):
+#         self.alpha = alpha
+#         self.model = Lasso(alpha=self.alpha)
+#         self.coefficients = None
+
+#     def fit(self, X, y):
+#         # 拆分数据集
+#         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+#         # 训练模型
+#         self.model.fit(X_train, y_train)
+#         # 保存特征系数
+#         self.coefficients = self.model.coef_
+
+#     def predict(self, X):
+#         return self.model.predict(X)
+
+#     def get_coefficients(self):
+#         return self.coefficients
+
+#     def evaluate(self, X, y):
+#         y_pred = self.predict(X)
+#         mse = mean_squared_error(y, y_pred)
+#         r2 = r2_score(y, y_pred)
+#         return mse, r2
+
+
+class LassoRegressionModel:
+    def __init__(self, alpha=1.0):
+        self.alpha = alpha
+        self.model = Lasso(alpha=self.alpha)
+        self.coefficients = None
+        self.mse = None
+        self.r2 = None
+
+    def fit(self, X_train, y_train):
+        # 训练模型
+        self.model.fit(X_train, y_train)
+        # 保存特征系数
+        self.coefficients = self.model.coef_
 
     def predict(self, X):
-        """进行预测"""
         return self.model.predict(X)
 
-    def score(self, X, y):
-        """评估模型的 R² 得分"""
-        return self.model.score(X, y)
+    def evaluate(self, X_test, y_test):
+        # 进行预测
+        predictions = self.predict(X_test)
+        # 评估模型
+        self.mse = mean_squared_error(y_test, predictions)
+        self.r2 = r2_score(y_test, predictions)
+        return self.mse, self.r2
+
+    def get_coefficients(self):
+        return self.coefficients
+
+    def get_metrics(self):
+        return {'MSE': self.mse, 'R²': self.r2}
