@@ -8,13 +8,13 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
-from xgboost import XGBRegressor
+# from xgboost import XGBRegressor
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
-from lightgbm import LGBMRegressor
+# from lightgbm import LGBMRegressor
 
 # Load your dataset
-data = pd.read_csv('/content/drive/MyDrive/loss modelling of magnetic components/processed_train_data.csv')
+data = pd.read_csv('processed_train_data.csv')
 
 # 创建标签列表
 labels = ['material_1'] * 3400 + ['material_2'] * 3000 + ['material_3'] * 3200 + ['material_4'] * 2800
@@ -30,8 +30,11 @@ data['Bm'] = np.max(data.iloc[:, 4:1028].values, axis=1)
 data['transmission_energy'] = data['f/Hz'] * data['Bm']
 
 # Define features and target
-X = data[['f/Hz', 'Bm', 'T/oC', 'material', 'waveform']]
+# X = data[['T/oC', 'material', 'waveform']]
+X = data[[ 'waveform', 'T/oC']]
+
 X = pd.get_dummies(X)  # One-hot encoding for 'material' and 'waveform'
+print(X)
 y = data['P_w/m3']
 
 # Split the dataset into training and testing sets
@@ -76,3 +79,37 @@ final_error = (np.abs(y_test - final_prediction) / y_test).mean()
 
 print(f"Final Error of the weighted ensemble: {final_error}")
 print(f"Model weights: {weights}")
+
+
+
+from sklearn.metrics import r2_score
+
+# 训练随机森林模型并进行预测
+rf_model = RandomForestRegressor()
+rf_model.fit(X_train, y_train)
+y_rf_pred = rf_model.predict(X_test)
+
+# 计算 R² 值
+r2_rf = r2_score(y_test, y_rf_pred)
+print(f"Random Forest R²: {r2_rf}")
+
+# 打印特征的重要性
+importances = rf_model.feature_importances_
+feature_names = X.columns
+
+# 创建 DataFrame 以便于可视化
+importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+importance_df = importance_df.sort_values(by='Importance', ascending=False)
+
+print(importance_df)
+
+import matplotlib.pyplot as plt
+
+# 创建条形图
+plt.figure(figsize=(10, 6))
+plt.barh(importance_df['Feature'], importance_df['Importance'], color='skyblue')
+plt.xlabel('Importance')
+plt.title('Feature Importance from Random Forest')
+plt.gca().invert_yaxis()  # 反转 y 轴，使最重要特征在顶部
+plt.show()
+
